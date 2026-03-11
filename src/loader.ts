@@ -14,6 +14,7 @@ const pkgDir = resolve(dirname(fileURLToPath(import.meta.url)), '..', 'pkg')
 // MUST be set before any dynamic import of pi SDK fires — this is what config.js
 // reads to determine APP_NAME and CONFIG_DIR_NAME
 process.env.PI_PACKAGE_DIR = pkgDir
+process.env.PI_SKIP_VERSION_CHECK = '1'  // GSD ships its own update check — suppress pi's
 process.title = 'gsd'
 
 // Print branded banner on first launch (before ~/.gsd/ exists)
