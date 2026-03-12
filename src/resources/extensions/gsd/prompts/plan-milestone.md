@@ -6,6 +6,8 @@ All relevant context has been preloaded below — start working immediately with
 
 {{inlinedContext}}
 
+Narrate your decomposition reasoning — why you're grouping work this way, what risks are driving the order, what verification strategy you're choosing and why.
+
 Then:
 1. Read the template at `~/.gsd/agent/extensions/gsd/templates/roadmap.md`
 2. Read `.gsd/REQUIREMENTS.md` if it exists. Treat **Active** requirements as the capability contract for planning. If it does not exist, continue in legacy compatibility mode but explicitly note that requirement coverage is operating without a contract.

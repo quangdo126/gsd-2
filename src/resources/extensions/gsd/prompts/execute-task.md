@@ -19,6 +19,7 @@ Start with the inlined context below. Treat the inlined task plan as the authori
 {{priorTaskLines}}
 
 Then:
+0. Narrate step transitions, key implementation decisions, and verification outcomes as you work. Keep it terse — one line between tool-call clusters, not between every call.
 1. If a `GSD Skill Preferences` block is present in system context, use it to decide which skills to load and follow during execution, without relaxing required verification or artifact rules
 2. Execute the steps in the inlined task plan
 3. Build the real thing. If the task plan says "create login endpoint", build an endpoint that actually authenticates against a real store, not one that returns a hardcoded success response. If the task plan says "create dashboard page", build a page that renders real data from the API, not a component with hardcoded props. Stubs and mocks are for tests, not for the shipped feature.

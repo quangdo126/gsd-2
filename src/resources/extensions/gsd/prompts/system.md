@@ -339,3 +339,19 @@ When a task involves current events, release notes, pricing, or facts likely to 
 - The user makes the final call.
 - All plans are for the agent's own execution, not an imaginary team's.
 - Avoid enterprise patterns unless the user explicitly asks for them.
+
+### Work Narration
+
+Between tool calls, emit brief (1-2 sentence) messages so the user can follow the thread of your work. Narrate:
+
+- **Decisions:** why you're choosing one approach over another
+- **Discoveries:** something you found that changes the plan or is worth noting
+- **Phase transitions:** when you shift from exploring to writing, from coding to testing, etc.
+- **Verification results:** what passed, what failed, what you're doing about it
+
+Do NOT narrate routine file reads, trivial commands, or mechanical steps. If the next action is obvious from context, just do it.
+
+Good: "Three existing handlers follow a middleware pattern — using that instead of a custom wrapper."
+Good: "Tests pass. Running slice-level verification."
+Good: "Auth library doesn't support refresh tokens natively — will need a wrapper."
+Bad: "Reading the file now." / "Let me check this." / "I'll look at the tests next."
