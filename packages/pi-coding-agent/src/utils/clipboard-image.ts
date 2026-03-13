@@ -1,7 +1,7 @@
 import { spawnSync } from "child_process";
 
 import { readImageFromClipboard as nativeReadImage } from "@gsd/native/clipboard";
-import { loadPhoton } from "./photon.js";
+import { ImageFormat, parseImage } from "@gsd/native/image";
 
 export type ClipboardImage = {
 	bytes: Uint8Array;
@@ -60,22 +60,14 @@ function isSupportedImageMimeType(mimeType: string): boolean {
 }
 
 /**
- * Convert unsupported image formats to PNG using Photon.
- * Returns null if conversion is unavailable or fails.
+ * Convert unsupported image formats to PNG using the native Rust image module.
+ * Returns null if conversion fails.
  */
 async function convertToPng(bytes: Uint8Array): Promise<Uint8Array | null> {
-	const photon = await loadPhoton();
-	if (!photon) {
-		return null;
-	}
-
 	try {
-		const image = photon.PhotonImage.new_from_byteslice(bytes);
-		try {
-			return image.get_bytes();
-		} finally {
-			image.free();
-		}
+		const image = await parseImage(bytes);
+		const pngBytes = await image.encode(ImageFormat.PNG, 100);
+		return new Uint8Array(pngBytes);
 	} catch {
 		return null;
 	}

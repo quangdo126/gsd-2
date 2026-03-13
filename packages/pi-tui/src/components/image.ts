@@ -26,6 +26,8 @@ export class Image implements Component {
 	private theme: ImageTheme;
 	private options: ImageOptions;
 	private imageId?: number;
+	private dimensionsResolved = false;
+	private onDimensionsResolved?: () => void;
 
 	private cachedLines?: string[];
 	private cachedWidth?: number;
@@ -41,8 +43,28 @@ export class Image implements Component {
 		this.mimeType = mimeType;
 		this.theme = theme;
 		this.options = options;
-		this.dimensions = dimensions || getImageDimensions(base64Data, mimeType) || { widthPx: 800, heightPx: 600 };
+		this.dimensions = dimensions || { widthPx: 800, heightPx: 600 };
+		this.dimensionsResolved = !!dimensions;
 		this.imageId = options.imageId;
+
+		if (!dimensions) {
+			getImageDimensions(base64Data).then((dims) => {
+				if (dims) {
+					this.dimensions = dims;
+					this.dimensionsResolved = true;
+					this.invalidate();
+					this.onDimensionsResolved?.();
+				}
+			});
+		}
+	}
+
+	/**
+	 * Register a callback invoked when async dimension parsing completes.
+	 * Useful for triggering a re-render after the Image updates its layout.
+	 */
+	setOnDimensionsResolved(cb: () => void): void {
+		this.onDimensionsResolved = cb;
 	}
 
 	/** Get the Kitty image ID used by this image (if any). */

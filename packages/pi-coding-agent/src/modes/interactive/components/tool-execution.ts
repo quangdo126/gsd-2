@@ -3,7 +3,6 @@ import {
 	Box,
 	Container,
 	getCapabilities,
-	getImageDimensions,
 	Image,
 	imageFallback,
 	Spacer,
@@ -491,6 +490,10 @@ export class ToolExecutionComponent extends Container {
 						{ fallbackColor: (s: string) => theme.fg("toolOutput", s) },
 						{ maxWidthCells: 60 },
 					);
+					imageComponent.setOnDimensionsResolved(() => {
+						this.updateDisplay();
+						this.ui.requestRender();
+					});
 					this.imageComponents.push(imageComponent);
 					this.addChild(imageComponent);
 				}
@@ -601,8 +604,7 @@ export class ToolExecutionComponent extends Container {
 		if (imageBlocks.length > 0 && (!caps.images || !this.showImages)) {
 			const imageIndicators = imageBlocks
 				.map((img: any) => {
-					const dims = img.data ? (getImageDimensions(img.data, img.mimeType) ?? undefined) : undefined;
-					return imageFallback(img.mimeType, dims);
+					return imageFallback(img.mimeType);
 				})
 				.join("\n");
 			output = output ? `${output}\n${imageIndicators}` : imageIndicators;
