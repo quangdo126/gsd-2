@@ -6,6 +6,11 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.10.1] - 2026-03-13
+
+### Fixed
+- `@gsd/native` package ships pre-compiled JavaScript instead of raw TypeScript, fixing startup crashes on Node.js 20, 22, and 24 (#248)
+
 ## [2.10.0] - 2026-03-13
 
 ### Added
@@ -390,7 +395,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - License updated to MIT
 
-[Unreleased]: https://github.com/gsd-build/gsd-2/compare/v2.10.0...HEAD
+[Unreleased]: https://github.com/gsd-build/gsd-2/compare/v2.10.1...HEAD
+[2.10.1]: https://github.com/gsd-build/gsd-2/compare/v2.10.0...v2.10.1
 [2.10.0]: https://github.com/gsd-build/gsd-2/compare/v2.9.0...v2.10.0
 [2.9.0]: https://github.com/gsd-build/gsd-2/compare/v2.8.3...v2.9.0
 [2.8.3]: https://github.com/gsd-build/gsd-2/compare/v2.8.2...v2.8.3
