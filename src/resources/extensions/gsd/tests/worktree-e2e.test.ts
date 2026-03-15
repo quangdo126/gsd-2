@@ -279,7 +279,7 @@ Test
 _None_
 `);
       run("git add -A", repo);
-      run("git commit -m 'add milestone'", repo);
+      run("git commit -m \"add milestone\"", repo);
 
       // Create orphaned worktree
       mkdirSync(join(repo, ".gsd", "worktrees"), { recursive: true });

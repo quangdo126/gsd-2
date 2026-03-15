@@ -60,7 +60,7 @@ _None_
 
   // Commit .gsd files
   run("git add -A", dir);
-  run("git commit -m 'add milestone'", dir);
+  run("git commit -m \"add milestone\"", dir);
 
   return dir;
 }
@@ -101,7 +101,7 @@ _None_
 `);
 
   run("git add -A", dir);
-  run("git commit -m 'add milestone'", dir);
+  run("git commit -m \"add milestone\"", dir);
 
   return dir;
 }
@@ -187,7 +187,7 @@ async function main(): Promise<void> {
       mkdirSync(activityDir, { recursive: true });
       writeFileSync(join(activityDir, "test.log"), "log data\n");
       run("git add -f .gsd/activity/test.log", dir);
-      run("git commit -m 'track runtime file'", dir);
+      run("git commit -m \"track runtime file\"", dir);
 
       const detect = await runGSDDoctor(dir);
       const trackedIssues = detect.issues.filter(i => i.code === "tracked_runtime_files");
