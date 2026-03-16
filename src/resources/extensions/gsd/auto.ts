@@ -39,9 +39,12 @@ import {
   readUnitRuntimeRecord,
   writeUnitRuntimeRecord,
 } from "./unit-runtime.js";
-import { resolveAutoSupervisorConfig, resolveModelWithFallbacksForUnit, loadEffectiveGSDPreferences, resolveSkillDiscoveryMode } from "./preferences.js";
+import { resolveAutoSupervisorConfig, resolveModelWithFallbacksForUnit, loadEffectiveGSDPreferences, resolveSkillDiscoveryMode, resolveDynamicRoutingConfig } from "./preferences.js";
 import { sendDesktopNotification } from "./notifications.js";
 import type { GSDPreferences } from "./preferences.js";
+import { classifyUnitComplexity, tierLabel } from "./complexity-classifier.js";
+import { resolveModelForComplexity } from "./model-router.js";
+import { initRoutingHistory, resetRoutingHistory, recordOutcome } from "./routing-history.js";
 import {
   checkPostUnitHooks,
   getActiveHook,
@@ -232,6 +235,9 @@ let pendingCrashRecovery: string | null = null;
 let autoStartTime: number = 0;
 let completedUnits: { type: string; id: string; startedAt: number; finishedAt: number }[] = [];
 let currentUnit: { type: string; id: string; startedAt: number } | null = null;
+
+/** Track dynamic routing decision for the current unit (for metrics) */
+let currentUnitRouting: { tier: string; modelDowngraded: boolean } | null = null;
 
 /** Track current milestone to detect transitions */
 let currentMilestoneId: string | null = null;
@@ -504,6 +510,7 @@ export async function stopAuto(ctx?: ExtensionContext, pi?: ExtensionAPI): Promi
   }
 
   resetMetrics();
+  resetRoutingHistory();
   resetHookState();
   if (basePath) clearPersistedHookState(basePath);
   active = false;
@@ -809,6 +816,9 @@ export async function startAuto(
   // Initialize metrics — loads existing ledger from disk
   initMetrics(base);
 
+  // Initialize routing history for adaptive learning
+  initRoutingHistory(base);
+
   // Snapshot installed skills so we can detect new ones after research
   if (resolveSkillDiscoveryMode() !== "off") {
     snapshotSkills();
@@ -1011,7 +1021,7 @@ export async function handleAgentEnd(
       const hookStartedAt = Date.now();
       if (currentUnit) {
         const modelId = ctx.model?.id ?? "unknown";
-        snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+        snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
         saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
       }
       currentUnit = { type: hookUnit.unitType, id: hookUnit.unitId, startedAt: hookStartedAt };
@@ -1227,7 +1237,10 @@ function updateProgressWidget(
   unitId: string,
   state: GSDState,
 ): void {
-  _updateProgressWidget(ctx, unitType, unitId, state, widgetStateAccessors);
+  const badge = currentUnitRouting?.tier
+    ? ({ light: "L", standard: "S", heavy: "H" }[currentUnitRouting.tier] ?? undefined)
+    : undefined;
+  _updateProgressWidget(ctx, unitType, unitId, state, widgetStateAccessors, badge);
 }
 
 /** State accessors for the widget — closures over module globals. */
@@ -1395,7 +1408,7 @@ async function dispatchNextUnit(
     // Save final session before stopping
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
       saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
     }
     sendDesktopNotification("GSD", "All milestones complete!", "success", "milestone");
@@ -1423,7 +1436,7 @@ async function dispatchNextUnit(
   if (!mid || !midTitle) {
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
       saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
     }
     await stopAuto(ctx, pi);
@@ -1438,7 +1451,7 @@ async function dispatchNextUnit(
   if (state.phase === "complete") {
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
       saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
     }
     // Clear completed-units.json for the finished milestone so it doesn't grow unbounded.
@@ -1508,7 +1521,7 @@ async function dispatchNextUnit(
   if (state.phase === "blocked") {
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
       saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
     }
     await stopAuto(ctx, pi);
@@ -1616,7 +1629,7 @@ async function dispatchNextUnit(
   if (dispatchResult.action === "stop") {
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
       saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
     }
     await stopAuto(ctx, pi);
@@ -1726,7 +1739,7 @@ async function dispatchNextUnit(
   if (lifetimeCount > MAX_LIFETIME_DISPATCHES) {
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
     }
     saveActivityLog(ctx, basePath, unitType, unitId);
     const expected = diagnoseExpectedArtifact(unitType, unitId, basePath);
@@ -1740,7 +1753,7 @@ async function dispatchNextUnit(
   if (prevCount >= MAX_UNIT_DISPATCHES) {
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
     }
     saveActivityLog(ctx, basePath, unitType, unitId);
 
@@ -1898,8 +1911,18 @@ async function dispatchNextUnit(
   // The session still holds the previous unit's data (newSession hasn't fired yet).
   if (currentUnit) {
     const modelId = ctx.model?.id ?? "unknown";
-    snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+    snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
     saveActivityLog(ctx, basePath, currentUnit.type, currentUnit.id);
+
+    // Record routing outcome for adaptive learning
+    if (currentUnitRouting) {
+      const isRetry = currentUnit.type === unitType && currentUnit.id === unitId;
+      recordOutcome(
+        currentUnit.type,
+        currentUnitRouting.tier as "light" | "standard" | "heavy",
+        !isRetry, // success = not being retried
+      );
+    }
 
     // Only mark the previous unit as completed if:
     // 1. We're not about to re-dispatch the same unit (retry scenario)
@@ -2003,7 +2026,54 @@ async function dispatchNextUnit(
   const modelConfig = resolveModelWithFallbacksForUnit(unitType);
   if (modelConfig) {
     const availableModels = ctx.modelRegistry.getAvailable();
-    const modelsToTry = [modelConfig.primary, ...modelConfig.fallbacks];
+
+    // ─── Dynamic Model Routing ─────────────────────────────────────────
+    // If enabled, classify unit complexity and potentially downgrade to a
+    // cheaper model. The user's configured model is the ceiling.
+    const routingConfig = resolveDynamicRoutingConfig();
+    let effectiveModelConfig = modelConfig;
+    let routingTierLabel = "";
+    currentUnitRouting = null;
+
+    if (routingConfig.enabled) {
+      // Compute budget pressure if budget ceiling is set
+      let budgetPct: number | undefined;
+      if (routingConfig.budget_pressure !== false) {
+        const budgetCeiling = prefs?.budget_ceiling;
+        if (budgetCeiling !== undefined && budgetCeiling > 0) {
+          const currentLedger = getLedger();
+          const totalCost = currentLedger ? getProjectTotals(currentLedger.units).cost : 0;
+          budgetPct = totalCost / budgetCeiling;
+        }
+      }
+
+      // Classify complexity (hook routing controlled by config.hooks)
+      const isHook = unitType.startsWith("hook/");
+      const shouldClassify = !isHook || routingConfig.hooks !== false;
+
+      if (shouldClassify) {
+        const classification = classifyUnitComplexity(unitType, unitId, basePath, budgetPct);
+        const availableModelIds = availableModels.map(m => m.id);
+        const routing = resolveModelForComplexity(classification, modelConfig, routingConfig, availableModelIds);
+
+        if (routing.wasDowngraded) {
+          effectiveModelConfig = {
+            primary: routing.modelId,
+            fallbacks: routing.fallbacks,
+          };
+          if (verbose) {
+            ctx.ui.notify(
+              `Dynamic routing [${tierLabel(classification.tier)}]: ${routing.modelId} (${classification.reason})`,
+              "info",
+            );
+          }
+        }
+        routingTierLabel = ` [${tierLabel(classification.tier)}]`;
+        currentUnitRouting = { tier: classification.tier, modelDowngraded: routing.wasDowngraded };
+      }
+    }
+
+    const modelsToTry = [effectiveModelConfig.primary, ...effectiveModelConfig.fallbacks];
     let modelSet = false;
 
     for (const modelId of modelsToTry) {
@@ -2068,11 +2138,11 @@ async function dispatchNextUnit(
 
       const ok = await pi.setModel(model, { persist: false });
       if (ok) {
-        const fallbackNote = modelId === modelConfig.primary
+        const fallbackNote = modelId === effectiveModelConfig.primary
           ? ""
-          : ` (fallback from ${modelConfig.primary})`;
+          : ` (fallback from ${effectiveModelConfig.primary})`;
         const phase = unitPhaseLabel(unitType);
-        ctx.ui.notify(`Model [${phase}]: ${model.provider}/${model.id}${fallbackNote}`, "info");
+        ctx.ui.notify(`Model [${phase}]${routingTierLabel}: ${model.provider}/${model.id}${fallbackNote}`, "info");
         modelSet = true;
         break;
       } else {
@@ -2151,7 +2221,7 @@ async function dispatchNextUnit(
 
     if (currentUnit) {
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
     }
     saveActivityLog(ctx, basePath, unitType, unitId);
 
@@ -2177,7 +2247,7 @@ async function dispatchNextUnit(
         timeoutAt: Date.now(),
       });
       const modelId = ctx.model?.id ?? "unknown";
-      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId);
+      snapshotUnitMetrics(ctx, currentUnit.type, currentUnit.id, currentUnit.startedAt, modelId, currentUnitRouting ?? undefined);
     }
     saveActivityLog(ctx, basePath, unitType, unitId);
 
