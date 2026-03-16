@@ -130,6 +130,16 @@ export function verifyExpectedArtifact(unitType: string, unitId: string, base: s
   if (!absPath) return unitType === "replan-slice";
   if (!existsSync(absPath)) return false;
 
+  // plan-slice must produce a plan with actual task entries, not just a scaffold.
+  // The plan file may exist from a prior discussion/context step with only headings
+  // but no tasks. Without this check the artifact is considered "complete" and the
+  // unit gets skipped — but deriveState still returns phase:"planning" because the
+  // plan has no tasks, creating an infinite skip loop (#699).
+  if (unitType === "plan-slice") {
+    const planContent = readFileSync(absPath, "utf-8");
+    if (!/^- \[[xX ]\] \*\*T\d+:/m.test(planContent)) return false;
+  }
+
   // execute-task must also have its checkbox marked [x] in the slice plan
   if (unitType === "execute-task") {
     const parts = unitId.split("/");

@@ -320,3 +320,67 @@ test("verifyExpectedArtifact detects roadmap [x] change despite parse cache", ()
     cleanup(base);
   }
 });
+
+// ─── verifyExpectedArtifact: plan-slice empty scaffold regression (#699) ──
+
+test("verifyExpectedArtifact rejects plan-slice with empty scaffold", () => {
+  const base = makeTmpBase();
+  try {
+    const sliceDir = join(base, ".gsd", "milestones", "M001", "slices", "S01");
+    mkdirSync(sliceDir, { recursive: true });
+    writeFileSync(join(sliceDir, "S01-PLAN.md"), "# S01: Test Slice\n\n## Tasks\n\n");
+    assert.strictEqual(
+      verifyExpectedArtifact("plan-slice", "M001/S01", base),
+      false,
+      "Empty scaffold should not be treated as completed artifact",
+    );
+  } finally {
+    cleanup(base);
+  }
+});
+
+test("verifyExpectedArtifact accepts plan-slice with actual tasks", () => {
+  const base = makeTmpBase();
+  try {
+    const sliceDir = join(base, ".gsd", "milestones", "M001", "slices", "S01");
+    mkdirSync(sliceDir, { recursive: true });
+    writeFileSync(join(sliceDir, "S01-PLAN.md"), [
+      "# S01: Test Slice",
+      "",
+      "## Tasks",
+      "",
+      "- [ ] **T01: Implement feature** `est:2h`",
+      "- [ ] **T02: Write tests** `est:1h`",
+    ].join("\n"));
+    assert.strictEqual(
+      verifyExpectedArtifact("plan-slice", "M001/S01", base),
+      true,
+      "Plan with task entries should be treated as completed artifact",
+    );
+  } finally {
+    cleanup(base);
+  }
+});
+
+test("verifyExpectedArtifact accepts plan-slice with completed tasks", () => {
+  const base = makeTmpBase();
+  try {
+    const sliceDir = join(base, ".gsd", "milestones", "M001", "slices", "S01");
+    mkdirSync(sliceDir, { recursive: true });
+    writeFileSync(join(sliceDir, "S01-PLAN.md"), [
+      "# S01: Test Slice",
+      "",
+      "## Tasks",
+      "",
+      "- [x] **T01: Implement feature** `est:2h`",
+      "- [ ] **T02: Write tests** `est:1h`",
+    ].join("\n"));
+    assert.strictEqual(
+      verifyExpectedArtifact("plan-slice", "M001/S01", base),
+      true,
+      "Plan with completed task entries should be treated as completed artifact",
+    );
+  } finally {
+    cleanup(base);
+  }
+});
