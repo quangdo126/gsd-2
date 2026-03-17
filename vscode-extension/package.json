@@ -2,7 +2,7 @@
   "name": "gsd-2",
   "displayName": "GSD-2",
   "description": "VS Code integration for the GSD-2 coding agent — sidebar dashboard, @gsd chat participant, and 15 commands",
-  "publisher": "gsd-build",
+  "publisher": "FluxLabs",
   "version": "0.1.0",
   "license": "MIT",
   "repository": {
