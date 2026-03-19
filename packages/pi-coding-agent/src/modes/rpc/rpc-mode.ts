@@ -19,6 +19,7 @@ import type {
 	ExtensionWidgetOptions,
 } from "../../core/extensions/index.js";
 import { type Theme, theme } from "../interactive/theme/theme.js";
+import { createDefaultCommandContextActions } from "../shared/command-context-actions.js";
 import { attachJsonlLineReader, serializeJsonLine } from "./jsonl.js";
 import type {
 	RpcCommand,
@@ -285,34 +286,7 @@ export async function runRpcMode(session: AgentSession): Promise<never> {
 	// Set up extensions with RPC-based UI context
 	await session.bindExtensions({
 		uiContext: createExtensionUIContext(),
-		commandContextActions: {
-			waitForIdle: () => session.agent.waitForIdle(),
-			newSession: async (options) => {
-				// Delegate to AgentSession (handles setup + agent state sync)
-				const success = await session.newSession(options);
-				return { cancelled: !success };
-			},
-			fork: async (entryId) => {
-				const result = await session.fork(entryId);
-				return { cancelled: result.cancelled };
-			},
-			navigateTree: async (targetId, options) => {
-				const result = await session.navigateTree(targetId, {
-					summarize: options?.summarize,
-					customInstructions: options?.customInstructions,
-					replaceInstructions: options?.replaceInstructions,
-					label: options?.label,
-				});
-				return { cancelled: result.cancelled };
-			},
-			switchSession: async (sessionPath) => {
-				const success = await session.switchSession(sessionPath);
-				return { cancelled: !success };
-			},
-			reload: async () => {
-				await session.reload();
-			},
-		},
+		commandContextActions: createDefaultCommandContextActions(session),
 		shutdownHandler: () => {
 			shutdownRequested = true;
 		},
