@@ -894,7 +894,10 @@ export async function showSmartEntry(
       ],
     });
     if (resume === "resume") {
-      await startAuto(ctx, pi, basePath, false, { interrupted });
+      await startAuto(ctx, pi, basePath, false, {
+        interrupted,
+        step: interrupted.pausedSession?.stepMode ?? false,
+      });
       return;
     }
   }

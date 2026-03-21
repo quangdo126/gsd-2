@@ -128,6 +128,17 @@ test("direct /gsd auto stale paused-session metadata is treated as stale when no
   }
 });
 
+test("direct /gsd auto source only resumes paused-session metadata for recoverable state with real recovery signals", async () => {
+  const source = await import(`node:fs/promises`).then((fs) =>
+    fs.readFile(new URL("../auto.ts", import.meta.url), "utf-8")
+  );
+  assert.ok(source.includes('freshStartAssessment.classification === "recoverable"'));
+  assert.ok(source.includes('freshStartAssessment.hasResumableDiskState'));
+  assert.ok(source.includes('|| !!freshStartAssessment.recoveryPrompt'));
+  assert.ok(source.includes('|| !!freshStartAssessment.lock'));
+  assert.ok(!source.includes('freshStartAssessment.classification === "recoverable"\n          || freshStartAssessment.hasResumableDiskState'));
+});
+
 test("auto module imports successfully after interrupted-session changes", async () => {
   const mod = await import(`../auto.ts?ts=${Date.now()}-${Math.random()}`);
   assert.equal(typeof mod.startAuto, "function");
