@@ -471,13 +471,21 @@ export function runWorktreePostCreateHook(
   }
   if (!hookPath) return null;
 
-  // Resolve relative paths against the source project root
-  const resolved = isAbsolute(hookPath) ? hookPath : join(sourceDir, hookPath);
+  // Resolve relative paths against the source project root.
+  // On Windows, convert 8.3 short paths (e.g. RUNNER~1) to long paths
+  // so execFileSync can locate the file correctly.
+  let resolved = isAbsolute(hookPath) ? hookPath : join(sourceDir, hookPath);
   if (!existsSync(resolved)) {
     return `Worktree post-create hook not found: ${resolved}`;
   }
+  if (process.platform === "win32") {
+    try { resolved = realpathSync.native(resolved); } catch { /* keep original */ }
+  }
 
   try {
+    // .bat/.cmd files on Windows require shell mode — execFileSync cannot
+    // spawn them directly (EINVAL).
+    const needsShell = process.platform === "win32" && /\.(bat|cmd)$/i.test(resolved);
     execFileSync(resolved, [], {
       cwd: worktreeDir,
       env: {
@@ -488,6 +496,7 @@ export function runWorktreePostCreateHook(
       stdio: ["ignore", "pipe", "pipe"],
       encoding: "utf-8",
       timeout: 30_000, // 30 second timeout
+      shell: needsShell,
     });
     return null;
   } catch (err) {
