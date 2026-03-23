@@ -58,7 +58,7 @@
   - Do: Rewrite planning prompts so they instruct tool calls instead of direct roadmap/plan file writes while preserving existing planning context variables; extend `detectRogueFileWrites()` to flag direct `ROADMAP.md` and `PLAN.md` writes for planning units; add contract tests that prove the new instructions and enforcement paths hold.
   - Verify: `node --test src/resources/extensions/gsd/tests/prompt-contracts.test.ts src/resources/extensions/gsd/tests/rogue-file-detection.test.ts`
   - Done when: planning prompts name the DB tools, direct file-write instructions are gone, and rogue detection tests fail if roadmap/plan files appear without matching DB state.
-- [ ] **T04: Close the slice with integrated regression coverage** `est:40m`
+- [x] **T04: Close the slice with integrated regression coverage** `est:40m`
   - Why: S01 crosses schema migration, tool registration, markdown rendering, prompt contracts, and migration fallback. The slice is only done when those surfaces pass together, not as isolated edits.
   - Files: `src/resources/extensions/gsd/tests/plan-milestone.test.ts`, `src/resources/extensions/gsd/tests/markdown-renderer.test.ts`, `src/resources/extensions/gsd/tests/prompt-contracts.test.ts`, `src/resources/extensions/gsd/tests/rogue-file-detection.test.ts`, `src/resources/extensions/gsd/tests/migrate-hierarchy.test.ts`
   - Do: Fill remaining regression gaps discovered during implementation, keep test fixtures aligned with the final roadmap format/tool output, and run the full targeted S01 suite so downstream slices inherit a stable baseline.

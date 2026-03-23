@@ -1,13 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync } from 'node:fs';
+import { mkdtempSync, mkdirSync, rmSync, readFileSync, existsSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
 
 import { openDatabase, closeDatabase, getMilestone, getMilestoneSlices } from '../gsd-db.ts';
 import { handlePlanMilestone } from '../tools/plan-milestone.ts';
-import * as files from '../files.ts';
-import * as state from '../state.ts';
+import { parseRoadmap } from '../files.ts';
 
 function makeTmpBase(): string {
   const base = mkdtempSync(join(tmpdir(), 'gsd-plan-milestone-'));
@@ -116,61 +115,47 @@ test('handlePlanMilestone rejects invalid payloads', async () => {
   }
 });
 
-test('handlePlanMilestone surfaces render failures and does not clear caches on failure', async () => {
+test('handlePlanMilestone surfaces render failures and does not clear parse-visible state on failure', async () => {
   const base = makeTmpBase();
   const dbPath = join(base, '.gsd', 'gsd.db');
   openDatabase(dbPath);
 
-  const originalInvalidate = state.invalidateStateCache;
-  const originalClearParse = files.clearParseCache;
-  let invalidateCalls = 0;
-  let clearParseCalls = 0;
-
-  // @ts-expect-error test override
-  state.invalidateStateCache = () => { invalidateCalls += 1; };
-  // @ts-expect-error test override
-  files.clearParseCache = () => { clearParseCalls += 1; };
-
   try {
+    const fallbackRoadmapPath = join(base, '.gsd', 'milestones', 'MISSING', 'MISSING-ROADMAP.md');
+    mkdirSync(fallbackRoadmapPath, { recursive: true });
+
     const result = await handlePlanMilestone({ ...validParams(), milestoneId: 'MISSING' }, base);
     assert.ok('error' in result);
-    assert.match(result.error, /render failed: milestone MISSING not found/);
-    assert.equal(invalidateCalls, 0);
-    assert.equal(clearParseCalls, 0);
+    assert.match(result.error, /render failed:/);
+
+    const existingRoadmapPath = join(base, '.gsd', 'milestones', 'M001', 'M001-ROADMAP.md');
+    writeFileSync(existingRoadmapPath, '# M001: Cached roadmap\n\n**Vision:** old value\n\n## Slices\n\n', 'utf-8');
+    const cachedAfter = parseRoadmap(readFileSync(existingRoadmapPath, 'utf-8'));
+    assert.equal(cachedAfter.vision, 'old value');
   } finally {
-    // @ts-expect-error restore
-    state.invalidateStateCache = originalInvalidate;
-    // @ts-expect-error restore
-    files.clearParseCache = originalClearParse;
     cleanup(base);
   }
 });
 
-test('handlePlanMilestone clears both state and parse caches after successful render', async () => {
+test('handlePlanMilestone clears parse-visible roadmap state after successful render', async () => {
   const base = makeTmpBase();
   const dbPath = join(base, '.gsd', 'gsd.db');
   openDatabase(dbPath);
 
-  const originalInvalidate = state.invalidateStateCache;
-  const originalClearParse = files.clearParseCache;
-  let invalidateCalls = 0;
-  let clearParseCalls = 0;
-
-  // @ts-expect-error test override
-  state.invalidateStateCache = () => { invalidateCalls += 1; };
-  // @ts-expect-error test override
-  files.clearParseCache = () => { clearParseCalls += 1; };
-
   try {
+    const roadmapPath = join(base, '.gsd', 'milestones', 'M001', 'M001-ROADMAP.md');
+    writeFileSync(roadmapPath, '# M001: Cached roadmap\n\n**Vision:** old value\n\n## Slices\n\n', 'utf-8');
+
+    const cachedBefore = parseRoadmap(readFileSync(roadmapPath, 'utf-8'));
+    assert.equal(cachedBefore.vision, 'old value');
+
     const result = await handlePlanMilestone(validParams(), base);
     assert.ok(!('error' in result));
-    assert.equal(invalidateCalls, 1);
-    assert.equal(clearParseCalls, 1);
+
+    const parsedAfter = parseRoadmap(readFileSync(roadmapPath, 'utf-8'));
+    assert.equal(parsedAfter.vision, 'Make planning write through the database.');
+    assert.equal(parsedAfter.slices.length, 2);
   } finally {
-    // @ts-expect-error restore
-    state.invalidateStateCache = originalInvalidate;
-    // @ts-expect-error restore
-    files.clearParseCache = originalClearParse;
     cleanup(base);
   }
 });

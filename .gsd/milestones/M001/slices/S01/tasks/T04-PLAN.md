@@ -48,3 +48,10 @@ Run and tighten the targeted S01 regression suite so the slice closes with real 
 - `src/resources/extensions/gsd/tests/prompt-contracts.test.ts` — finalized planning prompt assertions
 - `src/resources/extensions/gsd/tests/rogue-file-detection.test.ts` — finalized planning rogue-detection assertions
 - `src/resources/extensions/gsd/tests/migrate-hierarchy.test.ts` — finalized v8 migration/backfill assertions
+
+## Observability Impact
+
+- Runtime signals: integrated regressions must expose whether failures come from schema migration, milestone planning writes, roadmap rendering, prompt contracts, or rogue-write enforcement rather than collapsing into an opaque suite failure.
+- Inspection surfaces: `plan-milestone.test.ts`, `markdown-renderer.test.ts`, `prompt-contracts.test.ts`, `rogue-file-detection.test.ts`, and `migrate-hierarchy.test.ts` together provide the future inspection path for this slice; the integrated proof command must remain runnable and trustworthy.
+- Failure visibility: any failing assertion in this task should name the drifted contract directly (render shape, DB write path, prompt text, or rogue path) so a future agent can resume from the exact broken seam without re-research.
+- Redaction constraints: none beyond normal repository data; no secrets involved.
