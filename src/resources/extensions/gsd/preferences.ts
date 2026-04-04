@@ -49,6 +49,7 @@ export type {
   AutoSupervisorConfig,
   RemoteQuestionsConfig,
   CmuxPreferences,
+  CodebaseMapPreferences,
   GSDPreferences,
   LoadedGSDPreferences,
   SkillResolution,
@@ -372,6 +373,17 @@ function mergePreferences(base: GSDPreferences, override: GSDPreferences): GSDPr
     service_tier: override.service_tier ?? base.service_tier,
     forensics_dedup: override.forensics_dedup ?? base.forensics_dedup,
     show_token_cost: override.show_token_cost ?? base.show_token_cost,
+    codebase: (base.codebase || override.codebase)
+      ? {
+          ...(base.codebase ?? {}),
+          ...(override.codebase ?? {}),
+          // Merge exclude_patterns arrays rather than overriding
+          exclude_patterns: [
+            ...((base.codebase?.exclude_patterns) ?? []),
+            ...((override.codebase?.exclude_patterns) ?? []),
+          ].filter(Boolean),
+        }
+      : undefined,
   };
 }
 

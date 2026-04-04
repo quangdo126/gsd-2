@@ -103,6 +103,7 @@ export const KNOWN_PREFERENCE_KEYS = new Set<string>([
   "stale_commit_threshold_minutes",
   "context_management",
   "experimental",
+  "codebase",
 ]);
 
 /** Canonical list of all dispatch unit types. */
@@ -211,6 +212,16 @@ export interface ExperimentalPreferences {
   rtk?: boolean;
 }
 
+/** Configuration for the codebase map generator (/gsd codebase). */
+export interface CodebaseMapPreferences {
+  /** Additional directory/file patterns to exclude (e.g. ["docs/", "fixtures/"]). Merged with built-in defaults. */
+  exclude_patterns?: string[];
+  /** Max files to include in the map. Default: 500. */
+  max_files?: number;
+  /** Files-per-directory threshold before collapsing to a summary line. Default: 20. */
+  collapse_threshold?: number;
+}
+
 export interface GSDPreferences {
   version?: number;
   mode?: WorkflowMode;
@@ -275,6 +286,8 @@ export interface GSDPreferences {
    * See the preferences reference for details on each feature.
    */
   experimental?: ExperimentalPreferences;
+  /** Configuration for the codebase map generator (/gsd codebase). */
+  codebase?: CodebaseMapPreferences;
 }
 
 export interface LoadedGSDPreferences {

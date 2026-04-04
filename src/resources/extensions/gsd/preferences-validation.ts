@@ -857,5 +857,50 @@ export function validatePreferences(preferences: GSDPreferences): {
     }
   }
 
+  // ─── Codebase Map ──────────────────────────────────────────────────
+  if (preferences.codebase !== undefined) {
+    if (typeof preferences.codebase === "object" && preferences.codebase !== null) {
+      const cb = preferences.codebase as Record<string, unknown>;
+      const validCb: import("./preferences-types.js").CodebaseMapPreferences = {};
+
+      if (cb.exclude_patterns !== undefined) {
+        if (Array.isArray(cb.exclude_patterns) && cb.exclude_patterns.every((p: unknown) => typeof p === "string")) {
+          validCb.exclude_patterns = cb.exclude_patterns as string[];
+        } else {
+          errors.push("codebase.exclude_patterns must be an array of strings");
+        }
+      }
+      if (cb.max_files !== undefined) {
+        const mf = typeof cb.max_files === "number" ? cb.max_files : Number(cb.max_files);
+        if (Number.isFinite(mf) && mf >= 1) {
+          validCb.max_files = Math.floor(mf);
+        } else {
+          errors.push("codebase.max_files must be a positive integer");
+        }
+      }
+      if (cb.collapse_threshold !== undefined) {
+        const ct = typeof cb.collapse_threshold === "number" ? cb.collapse_threshold : Number(cb.collapse_threshold);
+        if (Number.isFinite(ct) && ct >= 1) {
+          validCb.collapse_threshold = Math.floor(ct);
+        } else {
+          errors.push("codebase.collapse_threshold must be a positive integer");
+        }
+      }
+
+      const knownCbKeys = new Set(["exclude_patterns", "max_files", "collapse_threshold"]);
+      for (const key of Object.keys(cb)) {
+        if (!knownCbKeys.has(key)) {
+          warnings.push(`unknown codebase key "${key}" — ignored`);
+        }
+      }
+
+      if (Object.keys(validCb).length > 0) {
+        validated.codebase = validCb;
+      }
+    } else {
+      errors.push("codebase must be an object");
+    }
+  }
+
   return { preferences: validated, errors, warnings };
 }

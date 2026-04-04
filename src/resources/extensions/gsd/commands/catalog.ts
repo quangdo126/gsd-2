@@ -229,8 +229,10 @@ const NESTED_COMPLETIONS: CompletionMap = {
   codebase: [
     { cmd: "generate", desc: "Generate or regenerate CODEBASE.md" },
     { cmd: "generate --max-files", desc: "Generate with custom file limit (default: 500)" },
+    { cmd: "generate --collapse-threshold", desc: "Generate with custom collapse threshold (default: 20)" },
     { cmd: "update", desc: "Incremental update (preserves descriptions)" },
     { cmd: "update --max-files", desc: "Update with custom file limit" },
+    { cmd: "update --collapse-threshold", desc: "Update with custom collapse threshold" },
     { cmd: "stats", desc: "Show file count, description coverage, and generation time" },
     { cmd: "help", desc: "Show usage and available subcommands" },
   ],
