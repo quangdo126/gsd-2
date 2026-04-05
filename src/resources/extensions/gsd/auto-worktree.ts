@@ -314,10 +314,28 @@ export function syncProjectRootToWorktree(
   // openDatabase re-creates it, causing "no such table" failures (#2815).
   try {
     const wtDb = join(wtGsd, "gsd.db");
+    let deleteSidecars = false;
     if (existsSync(wtDb)) {
       const size = statSync(wtDb).size;
       if (size === 0) {
         unlinkSync(wtDb);
+        deleteSidecars = true;
+      }
+    } else {
+      // Main DB already missing — sidecars are orphaned from a previous
+      // partial cleanup and must still be removed.
+      deleteSidecars = true;
+    }
+    // Always clean up WAL/SHM sidecar files when the main DB was deleted
+    // or is already missing. Orphaned WAL/SHM files cause SQLite WAL
+    // recovery on next open, which triggers a CPU spin on Node 24's
+    // node:sqlite DatabaseSync implementation (#2478).
+    if (deleteSidecars) {
+      for (const suffix of ["-wal", "-shm"]) {
+        const f = wtDb + suffix;
+        if (existsSync(f)) {
+          unlinkSync(f);
+        }
       }
     }
   } catch (err) {
