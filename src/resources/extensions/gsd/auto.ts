@@ -895,6 +895,7 @@ export async function pauseAuto(
       sessionFile: s.pausedSessionFile,
       activeEngineId: s.activeEngineId,
       activeRunDir: s.activeRunDir,
+      autoStartTime: s.autoStartTime,
     };
     const runtimeDir = join(gsdRoot(s.originalBasePath || s.basePath), "runtime");
     mkdirSync(runtimeDir, { recursive: true });
@@ -1137,6 +1138,7 @@ export async function startAuto(
           s.activeRunDir = meta.activeRunDir ?? null;
           s.originalBasePath = meta.originalBasePath || base;
           s.stepMode = meta.stepMode ?? requestedStepMode;
+          s.autoStartTime = meta.autoStartTime || Date.now();
           s.paused = true;
           try { unlinkSync(pausedPath); } catch (err) { /* non-fatal */
             logWarning("session", `pause file cleanup failed: ${err instanceof Error ? err.message : String(err)}`, { file: "auto.ts" });
@@ -1162,6 +1164,7 @@ export async function startAuto(
             s.currentMilestoneId = meta.milestoneId;
             s.originalBasePath = meta.originalBasePath || base;
             s.stepMode = meta.stepMode ?? requestedStepMode;
+            s.autoStartTime = meta.autoStartTime || Date.now();
             s.paused = true;
             // Clean up the persisted file — we're consuming it
             try { unlinkSync(pausedPath); } catch (err) { /* non-fatal */
@@ -1194,6 +1197,7 @@ export async function startAuto(
     s.cmdCtx = ctx;
     s.basePath = base;
     setLogBasePath(base);
+    if (!s.autoStartTime || s.autoStartTime <= 0) s.autoStartTime = Date.now();
     s.unitDispatchCount.clear();
     s.unitLifetimeDispatches.clear();
     if (!getLedger()) initMetrics(base);

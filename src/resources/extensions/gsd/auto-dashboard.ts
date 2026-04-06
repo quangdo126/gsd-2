@@ -585,10 +585,11 @@ export function updateProgressWidget(
         lines.push(rightAlign(headerLeft, headerRight, width));
 
         // Worktree/branch right-aligned below header
-        if (worktreeName && cachedBranch) {
-          lines.push(rightAlign("", theme.fg("dim", `${worktreeName} (${cachedBranch})`), width));
-        } else if (cachedBranch) {
-          lines.push(rightAlign("", theme.fg("dim", cachedBranch), width));
+        const branchLabel = worktreeName && cachedBranch
+          ? `${worktreeName} (${cachedBranch})`
+          : cachedBranch ?? "";
+        if (branchLabel) {
+          lines.push(rightAlign("", theme.fg("dim", branchLabel), width));
         }
 
         // Show health signal details when degraded (yellow/red)
