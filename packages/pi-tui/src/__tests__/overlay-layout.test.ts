@@ -34,6 +34,23 @@ describe("compositeOverlays — backdrop", () => {
 		assert.ok(dimmedLine.includes("\x1b[2m"), "base line should be dimmed");
 	});
 
+	it("backdrop uses 256-color dark gray background", () => {
+		const base = ["hello world", "second line"];
+		const overlay = makeEntry(["OV"], {
+			width: 2,
+			anchor: "top-left",
+			backdrop: true,
+		});
+
+		const result = compositeOverlays(base, [overlay], 20, 20, 2);
+
+		// Check a non-overlay line for full backdrop codes
+		const line = result.find((l) => l.includes("second line"));
+		assert.ok(line, "should have a line containing 'second line'");
+		assert.ok(line.includes("\x1b[38;5;242m"), "backdrop should set gray foreground");
+		assert.ok(line.includes("\x1b[48;5;233m"), "backdrop should set dark gray background");
+	});
+
 	it("does not dim when backdrop is false/absent", () => {
 		const base = ["hello world", "second line"];
 		const overlay = makeEntry(["OVERLAY"], {

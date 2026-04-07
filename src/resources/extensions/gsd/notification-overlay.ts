@@ -157,17 +157,11 @@ export class GSDNotificationOverlay {
     }
 
     const content = this.buildContentLines(width);
-    const viewportHeight = Math.max(5, process.stdout.rows ? process.stdout.rows - 8 : 24);
-    const chromeHeight = 2; // top + bottom border
-    const visibleContentRows = Math.max(1, viewportHeight - chromeHeight);
+    const maxVisibleRows = Math.max(5, process.stdout.rows ? process.stdout.rows - 8 : 24) - 2;
+    const visibleContentRows = Math.min(content.length, maxVisibleRows);
     const maxScroll = Math.max(0, content.length - visibleContentRows);
     this.scrollOffset = Math.min(this.scrollOffset, maxScroll);
     const visibleContent = content.slice(this.scrollOffset, this.scrollOffset + visibleContentRows);
-
-    // Pad to fill viewport so the overlay covers underlying content
-    while (visibleContent.length < visibleContentRows) {
-      visibleContent.push("");
-    }
 
     const lines = this.wrapInBox(visibleContent, width);
 

@@ -324,10 +324,12 @@ export function compositeOverlays(
 
 	const viewportStart = Math.max(0, workingHeight - termHeight);
 
-	// Apply backdrop dimming if any visible overlay requests it
+	// Apply backdrop dimming if any visible overlay requests it.
+	// Uses dim + dark gray background (256-color 233) so the overlay pops visually.
 	const hasBackdrop = visibleEntries.some((e) => e.options?.backdrop);
 	if (hasBackdrop) {
-		const dimFn = (text: string) => `\x1b[2m${text}\x1b[22m`;
+		const dimFn = (text: string) =>
+			`\x1b[2m\x1b[38;5;242m\x1b[48;5;233m${text}\x1b[49m\x1b[39m\x1b[22m`;
 		for (let i = viewportStart; i < result.length; i++) {
 			if (!isImageLine(result[i]) && result[i].length > 0) {
 				result[i] = applyBackgroundToLine(result[i], termWidth, dimFn);
