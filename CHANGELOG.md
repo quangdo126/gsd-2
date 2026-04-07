@@ -6,6 +6,36 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.65.0] - 2026-04-07
+
+### Added
+- **gsd**: persistent notification panel with TUI overlay, widget, and web API
+- **gsd**: wire blocking behavior and strict mode for enhanced verification
+- **gsd**: add post-execution cross-task consistency checks
+- **gsd**: add pre-execution plan verification checks
+
+### Fixed
+- **gsd**: wrap long notification messages and fit overlay to content
+- **gsd**: remove background color from backdrop, fix message truncation
+- **gsd**: restore consistent overlay height to prevent ghost artifacts
+- **gsd**: improve notification overlay backdrop and content-fit sizing
+- **gsd**: only unlink notification lock when owned, prevent foreign lock deletion
+- **gsd**: add backdrop dimming and viewport padding to notification overlay
+- **gsd**: add intent + phase guards to resume context fallback (#3615)
+- **gsd**: inject task context for unstructured resume prompts (#3615)
+- **pi-coding-agent**: restore extension tools after session switch (#3616)
+- **agent-loop**: schema overload cap ignores bash execution errors (#3618)
+- **bg-shell**: prevent signal handler accumulation + cap alert queue
+- **gsd**: coerce plain-string provides field to array in complete-slice (#3585)
+- address PR #3468 review findings
+- **gsd**: persist autoStartTime across session resume so elapsed timer survives /exit
+- **gsd**: add enhanced_verification preferences to mergePreferences
+- **headless**: treat discuss and plan as multi-turn commands
+
+### Changed
+- **interactive**: cap rendered chat components + kill orphan descendants
+- **tui**: render-skip, frame isolation, Text cache guard, dispose
+
 ## [2.64.0] - 2026-04-06
 
 ### Added
@@ -2406,7 +2436,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - License updated to MIT
 
-[Unreleased]: https://github.com/gsd-build/gsd-2/compare/v2.64.0...HEAD
+[Unreleased]: https://github.com/gsd-build/gsd-2/compare/v2.65.0...HEAD
+[2.65.0]: https://github.com/gsd-build/gsd-2/compare/v2.64.0...v2.65.0
 [2.64.0]: https://github.com/gsd-build/gsd-2/compare/v2.63.0...v2.64.0
 [2.63.0]: https://github.com/gsd-build/gsd-2/compare/v2.62.1...v2.63.0
 [2.62.1]: https://github.com/gsd-build/gsd-2/compare/v2.62.0...v2.62.1
