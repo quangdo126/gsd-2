@@ -238,8 +238,7 @@ export async function checkPackageExistence(
 export function normalizeFilePath(filePath: string): string {
   if (!filePath) return filePath;
 
-  // Strip backtick wrapping from LLM-generated paths (#3649)
-  let normalized = filePath.replace(/`/g, "");
+  let normalized = extractPathFromAnnotation(filePath);
 
   // Normalize path separators to forward slashes
   normalized = normalized.replace(/\\/g, "/");
@@ -258,6 +257,24 @@ export function normalizeFilePath(filePath: string): string {
   }
   
   return normalized;
+}
+
+function extractPathFromAnnotation(raw: string): string {
+  const trimmed = raw.trim();
+  if (!trimmed) return trimmed;
+
+  const backtickMatch = trimmed.match(/^`([^`]+)`(?:\s+[—–-]\s+.*)?$/);
+  if (backtickMatch) {
+    return backtickMatch[1].trim();
+  }
+
+  const annotatedMatch = trimmed.match(/^(.+?)\s+[—–-]\s+.+$/);
+  if (annotatedMatch) {
+    return annotatedMatch[1].trim();
+  }
+
+  // Fall back to the original behavior for already-plain paths.
+  return trimmed.replace(/`/g, "");
 }
 
 /**

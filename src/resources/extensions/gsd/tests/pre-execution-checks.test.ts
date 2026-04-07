@@ -1083,11 +1083,77 @@ describe("checkTaskOrdering false positive regression (#3677)", () => {
     const results = checkTaskOrdering(tasks, "/tmp");
     assert.equal(results.length, 0, "Normalized task.files path should not trigger a false positive");
   });
+
+  test("annotated inputs still trigger ordering violations against later plain outputs", () => {
+    const tasks = [
+      createTask({
+        id: "T01",
+        sequence: 0,
+        files: [],
+        inputs: ["`later.ts` — needed first"],
+        expected_output: [],
+      }),
+      createTask({
+        id: "T02",
+        sequence: 1,
+        files: [],
+        inputs: [],
+        expected_output: ["later.ts"],
+      }),
+    ];
+
+    const results = checkTaskOrdering(tasks, "/tmp");
+    assert.equal(results.length, 1, "Annotated inputs should still match later plain expected_output entries");
+    assert.equal(results[0].target, "`later.ts` — needed first");
+    assert.ok(results[0].message.includes("sequence violation"));
+  });
 });
 
 // ─── checkFilePathConsistency additional edge cases ──────────────────────────
 
 describe("checkFilePathConsistency additional edge cases", () => {
+  test("annotated inputs match files that already exist on disk", () => {
+    const tempDir = join(tmpdir(), `pre-exec-test-annotated-input-${Date.now()}`);
+    mkdirSync(tempDir, { recursive: true });
+    writeFileSync(join(tempDir, "existing.ts"), "// content");
+
+    try {
+      const tasks = [
+        createTask({
+          id: "T01",
+          files: [],
+          inputs: ["`existing.ts` — file already on disk"],
+          expected_output: [],
+        }),
+      ];
+
+      const results = checkFilePathConsistency(tasks, tempDir);
+      assert.equal(results.length, 0, "Annotated inputs should resolve to the on-disk file path");
+    } finally {
+      rmSync(tempDir, { recursive: true, force: true });
+    }
+  });
+
+  test("plain inputs match prior annotated expected outputs", () => {
+    const tasks = [
+      createTask({
+        id: "T01",
+        files: [],
+        inputs: [],
+        expected_output: ["`generated.ts` — created earlier"],
+      }),
+      createTask({
+        id: "T02",
+        files: [],
+        inputs: ["generated.ts"],
+        expected_output: [],
+      }),
+    ];
+
+    const results = checkFilePathConsistency(tasks, "/tmp");
+    assert.equal(results.length, 0, "Prior annotated expected_output entries should satisfy later plain inputs");
+  });
+
   test("inputs referencing glob-like patterns should not crash", () => {
     // A glob pattern in inputs is unusual but should be handled gracefully.
     // The file won't exist on disk, so it should produce a blocking result.
