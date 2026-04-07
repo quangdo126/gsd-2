@@ -246,11 +246,13 @@ export async function selectAndApplyModel(
       const ok = await pi.setModel(model, { persist: false });
       if (ok) {
         appliedModel = model;
-        const fallbackNote = modelId === effectiveModelConfig.primary
-          ? ""
-          : ` (fallback from ${effectiveModelConfig.primary})`;
-        const phase = unitPhaseLabel(unitType);
-        ctx.ui.notify(`Model [${phase}]${routingTierLabel}: ${model.provider}/${model.id}${fallbackNote}`, "info");
+        if (verbose) {
+          const fallbackNote = modelId === effectiveModelConfig.primary
+            ? ""
+            : ` (fallback from ${effectiveModelConfig.primary})`;
+          const phase = unitPhaseLabel(unitType);
+          ctx.ui.notify(`Model [${phase}]${routingTierLabel}: ${model.provider}/${model.id}${fallbackNote}`, "info");
+        }
         break;
       } else {
         const nextModel = modelsToTry[modelsToTry.indexOf(modelId) + 1];

@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { mkdtempSync, mkdirSync, rmSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { mkdtempSync, mkdirSync, rmSync, writeFileSync, readFileSync } from "node:fs";
+import { dirname, join } from "node:path";
 import { tmpdir } from "node:os";
+import { fileURLToPath } from "node:url";
+
+const __dirname = dirname(fileURLToPath(import.meta.url));
 
 import { resolvePreferredModelConfig, resolveModelId } from "../auto-model-selection.js";
 
@@ -194,6 +197,34 @@ test("resolveModelId: bare ID with claude-code as only provider still resolves",
   const result = resolveModelId("claude-sonnet-4-6", availableModels, "claude-code");
   assert.ok(result, "should resolve even when only available via claude-code");
   assert.equal(result.provider, "claude-code");
+});
+
+// ─── selectAndApplyModel verbose-gating tests ──────────────────────────
+
+test("model change notify in selectAndApplyModel is gated behind verbose flag", () => {
+  // The Model [phase] [tier] notification should only fire when verbose=true.
+  // The dashboard header already shows the active model, so the notification
+  // is redundant noise during auto-mode (#3719).
+  const gsdDir = join(__dirname, "..");
+  const src = readFileSync(join(gsdDir, "auto-model-selection.ts"), "utf-8");
+
+  // Find the block where setModel succeeds (appliedModel = model) and
+  // verify notify is inside an `if (verbose)` guard.
+  const setModelBlock = src.match(
+    /const ok = await pi\.setModel\(model[\s\S]*?appliedModel = model;([\s\S]*?)break;/,
+  );
+  assert.ok(setModelBlock, "should find the setModel success block");
+
+  const blockBody = setModelBlock![1];
+  // The notify call must be inside an if (verbose) block
+  assert.ok(
+    blockBody.includes("if (verbose)"),
+    "Model change ctx.ui.notify must be gated behind if (verbose) to avoid auto-mode notification noise",
+  );
+  assert.ok(
+    blockBody.includes("ctx.ui.notify"),
+    "notify call should still exist (just verbose-gated)",
+  );
 });
 
 test("resolveModelId: anthropic wins over claude-code regardless of list order", () => {
