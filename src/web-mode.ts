@@ -6,6 +6,7 @@ import { createServer } from 'node:net'
 import { dirname, join, resolve } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { appRoot, webPidFilePath as defaultWebPidFilePath } from './app-paths.js'
+import { generateTunnelJwt, startTunnel, stopTunnel, type TunnelInfo } from './tunnel-service.js'
 
 const DEFAULT_HOST = '127.0.0.1'
 const DEFAULT_PACKAGE_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..')
@@ -38,6 +39,8 @@ export interface WebModeLaunchOptions {
   port?: number
   /** Additional allowed origins for CORS (forwarded as GSD_WEB_ALLOWED_ORIGINS). */
   allowedOrigins?: string[]
+  /** Enable Cloudflare Tunnel for remote access via --tunnel flag. */
+  tunnel?: boolean
 }
 
 export interface ResolvedWebHostBootstrap {
@@ -68,6 +71,8 @@ export interface WebModeLaunchSuccess {
   hostKind: ResolvedWebHostBootstrap['kind']
   hostPath: string
   hostRoot: string
+  /** Set when --tunnel is used: the public Cloudflare Tunnel URL. */
+  tunnelUrl?: string
 }
 
 export interface WebModeLaunchFailure {
@@ -578,7 +583,17 @@ export async function launchWebMode(
   cleanupStaleInstance(options.cwd, stderr, deps.registryPath)
 
   const port = options.port ?? await (deps.resolvePort ?? reserveWebPort)(host)
-  const authToken = randomBytes(32).toString('hex')
+  const isTunnel = options.tunnel === true
+  // In tunnel mode, generate a JWT with 24h expiry; otherwise use a random hex token.
+  let authToken: string
+  let jwtSecretHex: string | undefined
+  if (isTunnel) {
+    const jwt = await generateTunnelJwt()
+    authToken = jwt.token
+    jwtSecretHex = jwt.secretHex
+  } else {
+    authToken = randomBytes(32).toString('hex')
+  }
   const url = `http://${host}:${port}`
   const env = {
     ...(deps.env ?? process.env),
@@ -591,6 +606,8 @@ export async function launchWebMode(
     GSD_WEB_PROJECT_SESSIONS_DIR: options.projectSessionsDir,
     GSD_WEB_PACKAGE_ROOT: resolution.packageRoot,
     GSD_WEB_HOST_KIND: resolution.kind,
+    // Pass the JWT secret to the web host so proxy.ts can verify tunnel tokens
+    ...(jwtSecretHex ? { GSD_WEB_JWT_SECRET: jwtSecretHex } : {}),
     ...(resolution.kind === 'source-dev' ? { NEXT_PUBLIC_GSD_DEV: '1' } : {}),
     ...(options.allowedOrigins?.length ? { GSD_WEB_ALLOWED_ORIGINS: options.allowedOrigins.join(',') } : {}),
   }
@@ -726,6 +743,26 @@ export async function launchWebMode(
     hostRoot: resolution.hostRoot,
   }
   stderr.write(`[gsd] Ready → ${authenticatedUrl}\n`)
+
+  // ── Tunnel mode: start Cloudflare quick tunnel ──────────────────────
+  if (isTunnel) {
+    try {
+      const tunnelInfo = await startTunnel(url, authToken, { stderr })
+      success.tunnelUrl = tunnelInfo.tunnelUrl
+
+      // Graceful cleanup: kill cloudflared when the main process exits
+      const cleanup = () => {
+        stopTunnel(tunnelInfo.process)
+      }
+      process.once('exit', cleanup)
+      process.once('SIGINT', () => { cleanup(); process.exit(0) })
+      process.once('SIGTERM', () => { cleanup(); process.exit(0) })
+    } catch (error) {
+      stderr.write(`[gsd] Tunnel failed: ${error instanceof Error ? error.message : String(error)}\n`)
+      stderr.write('[gsd] Web server is still running on localhost. Continuing without tunnel.\n')
+    }
+  }
+
   emitLaunchStatus(stderr, success)
   return success
 }

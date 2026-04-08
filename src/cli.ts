@@ -724,6 +724,7 @@ if (!process.stdin.isTTY || !process.stdout.isTTY) {
   process.stderr.write('[gsd]   gsd auto                       Auto-mode (pipeable, no TUI)\n')
   process.stderr.write('[gsd]   gsd --print "your message"     Single-shot prompt\n')
   process.stderr.write('[gsd]   gsd --web [path]               Browser-only web mode\n')
+  process.stderr.write('[gsd]   gsd --web --tunnel             Web mode with Cloudflare Tunnel + QR code\n')
   process.stderr.write('[gsd]   gsd --mode rpc                 JSON-RPC over stdin/stdout\n')
   process.stderr.write('[gsd]   gsd --mode mcp                 MCP server over stdin/stdout\n')
   process.stderr.write('[gsd]   gsd --mode text "message"      Text output mode\n')

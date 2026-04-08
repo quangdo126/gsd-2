@@ -38,7 +38,7 @@ export function getAuthToken(): string | null {
   // 1. Try the URL fragment (initial page load from gsd --web)
   const hash = window.location.hash
   if (hash) {
-    const match = hash.match(/token=([a-fA-F0-9]+)/)
+    const match = hash.match(/token=([a-zA-Z0-9_.\-]+)/)
     if (match) {
       cachedToken = match[1]
       // Persist to localStorage so the token survives page refreshes and
