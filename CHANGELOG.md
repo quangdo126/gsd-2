@@ -6,6 +6,13 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 
 ## [Unreleased]
 
+## [2.68.1] - 2026-04-10
+
+### Fixed
+- **ci**: update FILE-SYSTEM-MAP.md path after docs reorganization
+- **test**: update discord invite test path after docs reorganization
+- **gsd**: resolve resource-loader import for deployed extensions
+
 ## [2.68.0] - 2026-04-10
 
 ### Added
@@ -2664,7 +2671,8 @@ Format based on [Keep a Changelog](https://keepachangelog.com/en/1.1.0/).
 ### Changed
 - License updated to MIT
 
-[Unreleased]: https://github.com/gsd-build/gsd-2/compare/v2.68.0...HEAD
+[Unreleased]: https://github.com/gsd-build/gsd-2/compare/v2.68.1...HEAD
+[2.68.1]: https://github.com/gsd-build/gsd-2/compare/v2.68.0...v2.68.1
 [2.68.0]: https://github.com/gsd-build/gsd-2/compare/v2.67.0...v2.68.0
 [2.67.0]: https://github.com/gsd-build/gsd-2/compare/v2.66.1...v2.67.0
 [2.66.1]: https://github.com/gsd-build/gsd-2/compare/v2.66.0...v2.66.1
