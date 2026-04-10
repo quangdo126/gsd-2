@@ -287,9 +287,9 @@ test("resolveModelForComplexity falls back to tier-only when capability_routing 
   assert.ok(!result.selectionMethod || result.selectionMethod === "tier-only");
 });
 
-test("MODEL_CAPABILITY_PROFILES has entries for core models", () => {
+test("MODEL_CAPABILITY_PROFILES has entries for all tier-mapped models", () => {
   const profiledModels = Object.keys(MODEL_CAPABILITY_PROFILES);
-  assert.ok(profiledModels.length >= 9, `Expected ≥9 profiles, got ${profiledModels.length}`);
+  assert.ok(profiledModels.length >= 30, `Expected ≥30 profiles, got ${profiledModels.length}`);
   assert.ok(MODEL_CAPABILITY_PROFILES["claude-opus-4-6"]);
   assert.ok(MODEL_CAPABILITY_PROFILES["claude-haiku-4-5"]);
 });

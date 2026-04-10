@@ -20,7 +20,7 @@ import type {
   ReactiveExecutionConfig,
   GateEvaluationConfig,
 } from "./types.js";
-import type { DynamicRoutingConfig } from "./model-router.js";
+import type { DynamicRoutingConfig, ModelCapabilities } from "./model-router.js";
 
 export interface ContextManagementConfig {
   observation_masking?: boolean;          // default: true
@@ -255,6 +255,8 @@ export interface GSDPreferences {
   post_unit_hooks?: PostUnitHookConfig[];
   pre_dispatch_hooks?: PreDispatchHookConfig[];
   dynamic_routing?: DynamicRoutingConfig;
+  /** Per-model capability overrides. Deep-merged with built-in profiles for capability-aware routing (ADR-004). */
+  modelOverrides?: Record<string, { capabilities?: Partial<ModelCapabilities> }>;
   context_management?: ContextManagementConfig;
   token_profile?: TokenProfile;
   phases?: PhaseSkipPreferences;

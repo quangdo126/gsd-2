@@ -132,9 +132,7 @@ export async function selectAndApplyModel(
         }
 
         // Load user capability overrides from preferences (D-17: deep-merged with built-in profiles)
-        const capabilityOverrides = loadCapabilityOverrides(
-          (prefs as { modelOverrides?: Record<string, { capabilities?: Record<string, number> }> } | undefined) ?? {},
-        );
+        const capabilityOverrides = loadCapabilityOverrides(prefs ?? {});
 
         // Fire before_model_select hook (ADR-004, D-03)
         // Hook can override model selection entirely by returning { modelId }
